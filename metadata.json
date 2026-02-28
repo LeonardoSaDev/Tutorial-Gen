@@ -1,0 +1,7 @@
+{
+  "name": "TutorialGen AI",
+  "description": "Transform your photos and descriptions into cinematic AI-generated video tutorials using the latest Gemini Veo models.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
