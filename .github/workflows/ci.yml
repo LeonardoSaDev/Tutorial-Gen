@@ -17,19 +17,34 @@ jobs:
           node-version: 20.x
           cache: npm
       - run: npm ci
-      - name: Validar secret
+      - name: Status do secret
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          if [ -z "$GEMINI_API_KEY" ]; then
-            echo "Secret GEMINI_API_KEY ausente"; exit 1;
+          if [ -n "$GEMINI_API_KEY" ]; then
+            echo "SECRET_STATUS=AVAILABLE" >> "$GITHUB_ENV"
+            echo "::add-mask::$GEMINI_API_KEY"
+          else
+            echo "SECRET_STATUS=MISSING_OR_INACCESSIBLE" >> "$GITHUB_ENV"
           fi
-      - name: Criar .env.local
+      - name: Validar secret (apenas push/dispatch)
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          test -n "$GEMINI_API_KEY" || (echo "Secret GEMINI_API_KEY ausente"; exit 1)
+      - name: Criar .env.local (com secret)
+        if: ${{ env.SECRET_STATUS == 'AVAILABLE' }}
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           printf "GEMINI_API_KEY=%s\n" "$GEMINI_API_KEY" > .env.local
           echo "::add-mask::$GEMINI_API_KEY"
+      - name: Criar .env.local (sem secret - placeholder)
+        if: ${{ env.SECRET_STATUS != 'AVAILABLE' }}
+        run: |
+          printf "GEMINI_API_KEY=\n" > .env.local
+          echo "Usando placeholder: secret indisponível no contexto atual"
       - run: npm run build
       - uses: actions/upload-artifact@v4
         with:
